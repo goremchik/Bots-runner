@@ -1,0 +1,139 @@
+@boxSize: 30px;
+
+@font-face {
+    font-family: 'FontAwesome';
+    font-style: normal;
+    font-weight: 400;
+    src: url("../webfonts/fa-solid-900.eot");
+    src: url("../webfonts/fa-solid-900.eot?#iefix") format("embedded-opentype"), url("../webfonts/fa-solid-900.woff2") format("woff2"), url("../webfonts/fa-solid-900.woff") format("woff"), url("../webfonts/fa-solid-900.ttf") format("truetype"), url("../webfonts/fa-solid-900.svg#fontawesome") format("svg");
+}
+
+
+.field {
+    position: absolute;
+    top: 50px;
+    left: 50px;
+}
+
+.item-block {
+    position: absolute;
+    width: @boxSize;
+    height: @boxSize;
+    color: black;
+    text-align: center;
+    line-height: @boxSize;
+    font-family: 'FontAwesome';
+    background-color: #eee;
+    font-size: @boxSize - 2;
+
+    &_wall {
+        background-color: #aaa;
+    }
+
+    
+    &_bot {
+        &_big {
+            &:after {
+                content: '\f007';
+            }
+        }
+
+        &_medium {
+            font-size: @boxSize - 6;
+            &:after {
+                content: '\f007';
+            }
+        }
+
+        &_small {
+            font-size: @boxSize - 10;
+            &:after {
+                content: '\f007';
+            }
+        }
+    }
+
+    &_coin {
+        color: yellow;
+        &:after {
+            content: '\f005';
+        }
+    }
+
+    &_food {
+        color: palevioletred;
+        &:after {
+            content: '\f004';
+        }
+    }
+
+    &_enemy {
+        &_biggest {
+            color: green;
+            &:after {
+                content: '\f21b';
+            }
+        }
+        &_big {
+            color: yellowgreen;
+            &:after {
+                content: '\f21b';
+            }
+        }
+        &_medium {
+            color: orange;
+            &:after {
+                content: '\f21b';
+            }
+        }
+        &_small {
+            color: red;
+            &:after {
+                content: '\f21b';
+            }
+        }
+        &_smallest {
+            color: black;
+            &:after {
+                content: '\f21b';
+            }
+        }
+    }
+}
+
+.bot-icon {
+    font-family: 'FontAwesome';
+    &:after {
+        content: '\f007';
+    }
+    font-size: 40px;
+}
+
+.right-block {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    //border: solid 2px black;
+}
+
+.info-block {
+    width: 170px;
+    position: relative;
+    border: solid 2px black;
+    margin: 5px;
+    padding: 5px
+}
+
+.helth-string, .coins-string {
+    position: absolute;
+    left: 50px;
+    font-size: 20px;
+}
+
+.helth-string {
+    top: 5px;
+}
+
+.coins-string {
+    top: 30px;
+}
