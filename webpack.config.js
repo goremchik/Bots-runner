@@ -15,7 +15,7 @@ module.exports = {
   },
   output: {
     path: BUILD_DIR ,
-    filename: 'build.js'
+    filename: 'app.js'
   },
 
   
