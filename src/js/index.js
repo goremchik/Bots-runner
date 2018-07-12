@@ -1,7 +1,6 @@
-'use strict';
 
-let prepareField = require('./prepareField')
+import '../styles/style.less';
+
+import prepareField from './prepareField';
 
 prepareField();
-
-setTimeout(() => console.log('test'), 1000);

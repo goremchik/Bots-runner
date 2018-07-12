@@ -1,4 +1,4 @@
-@boxSize: 30px;
+@boxSize: 60px;
 
 @font-face {
     font-family: 'FontAwesome';
@@ -32,20 +32,20 @@
 
     
     &_bot {
-        &_big {
+        &-big {
             &:after {
                 content: '\f007';
             }
         }
 
-        &_medium {
+        &-medium {
             font-size: @boxSize - 6;
             &:after {
                 content: '\f007';
             }
         }
 
-        &_small {
+        &-small {
             font-size: @boxSize - 10;
             &:after {
                 content: '\f007';
@@ -68,31 +68,31 @@
     }
 
     &_enemy {
-        &_biggest {
+        &-biggest {
             color: green;
             &:after {
                 content: '\f21b';
             }
         }
-        &_big {
+        &-big {
             color: yellowgreen;
             &:after {
                 content: '\f21b';
             }
         }
-        &_medium {
+        &-medium {
             color: orange;
             &:after {
                 content: '\f21b';
             }
         }
-        &_small {
+        &-small {
             color: red;
             &:after {
                 content: '\f21b';
             }
         }
-        &_smallest {
+        &-smallest {
             color: black;
             &:after {
                 content: '\f21b';

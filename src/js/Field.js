@@ -1,172 +1,181 @@
-/**
- * Created by Andrii_Shoferivskyi on 2018-02-09.
- */
 
-var itemTypes = [ 
-    { name: "Empty",          className: "empty",          index: 0 },
-    { name: "Wall",           className: "wall",           index: 1 },
-    { name: "Coin",           className: "coin",           index: 2 },
-    { name: "Food",           className: "food",           index: 3 },
-    { name: "Bot Small",      className: "bot_small",      index: 4 },
-    { name: "Bot Medium",     className: "bot_medium",     index: 5 },
-    { name: "Bot Big",        className: "bot_big",        index: 6 },
-    { name: "Enemy Smallest", className: "enemy_smallest", index: 7 },
-    { name: "Enemy Small",    className: "enemy_small",    index: 8 },
-    { name: "Enemy Medium",   className: "enemy_medium",   index: 9 },
-    { name: "Enemy Big",      className: "enemy_big",      index: 10 },
-    { name: "Enemy Biggest",  className: "enemy_biggest",  index: 11 }
-];
+import ItemBlock from './ItemBlock';
+import { ITEM_COLORS, ACTIONS, TYPES } from './constants';
+import { getRandom } from './helper';
 
-Field.itemColors = ['green', 'orange', 'red', 'black', 'yellow'];
+const DEFAULT_FIELD_SIZE = 8;
 
-function Field(initObj) {
-    var DEFAULT_FIELD_SIZE = 8;
-    
-    this.matrix = [];
-    this.bots = [];
-    this.enemies = [];
+export default class Field {
 
-    this.numberMatrix = [];
+    constructor({ rows = DEFAULT_FIELD_SIZE, columns = DEFAULT_FIELD_SIZE, oninit,  enemies = 0, bots = 0, coins = 0, health = 0, updateFieldItem = () => {} }) {
+        this.matrix = [];
+        this.bots = [];
+        this.enemies = [];
 
-    var rows = initObj.rows || DEFAULT_FIELD_SIZE;
-    var columns = initObj.columns || DEFAULT_FIELD_SIZE;
+        this.numberMatrix = [];
 
-    this.oninit = typeof initObj.oninit === 'function' ? initObj.oninit : function () {};
-    this.onchange = function () {};
-    this.onStepEnd = function () {};
+        this.oninit = typeof oninit === 'function' ? oninit : () => {};
 
-    for (var i = 0; i < rows; i++) {
-        this.matrix[i] = [];
-        this.numberMatrix[i] = [];
-        for (var j = 0; j < columns; j++) {
-            this.generateItem(i, j, 0);
+        this.onchange = () => {};
+
+        this.onStepEnd = () => {};
+
+        for (let i = 0; i < rows; i++) {
+            this.matrix[i] = [];
+            this.numberMatrix[i] = [];
+
+            for (let j = 0; j < columns; j++) {
+                this.generateItem(i, j, TYPES.EMPTY);
+            }
+        }
+
+        this.generateRandomItems(enemies, TYPES.ENEMY_BIGGEST);
+        this.generateRandomItems(bots,    TYPES.BOT_BIG);
+        this.generateRandomItems(coins,   TYPES.COIN);
+        this.generateRandomItems(health,  TYPES.FOOD);
+
+        this.oninit(this);
+    }
+
+    generateRandomItems(amount, type) {
+        for (let i = 0; i < amount; i++) {
+            let { column, row } = this.getRandomEmptyCell();
+            this.generateItem(row, column, type, this.bots.length);
+
+
         }
     }
 
-    this.oninit.call(this);
-    
+    getRandomEmptyCell() {
+        let emptyCells = [].concat(...this.matrix)
+                           .filter(item => item.type === TYPES.EMPTY)
+                           .map( ({ column, row }) => ({ column, row }));
+
+        return emptyCells[getRandom(0, emptyCells.length)];
+    }
+
+    generateItem(row, column, type, botsAmount) {
+
+        let item = new ItemBlock(row, column, type);
+        item.color = item.isBot() ? ITEM_COLORS[botsAmount] : '';
+        console.log(item.color);
+        this.matrix[row][column] = item;
+        this.numberMatrix[row][column] = type;
+
+        if (item.isBot()) {
+            this.bots.push(item);
+        }
+
+        else if (item.isEnemy()) {
+            this.enemies.push(item);
+        }
+
+        this.onchange(this.matrix[row][column]);
+    };
+
+    // setType(row, column, type) {
+    //     this.matrix[row][column].type = type;
+    //     this.numberMatrix[row][column] = type;
+    //     this.onchange(this.matrix[row][column]);
+    // };
+
+    step() {
+        this.enemies.forEach(this.enemyStep.bind(this));
+        this.bots.forEach(this.botStep.bind(this));
+
+        this.onStepEnd(this);
+    };
+
+    enemyStep(enemy) {
+        if (enemy.isDead) { return; }
+
+        let action = enemy.getAction(this.numberMatrix);
+
+        if (action === ACTIONS.NOTHING) { return; }
+
+        let step = enemy.getStep(action);
+
+        let newRow = enemy.row + step.row;
+        let newColumn = enemy.column + step.column;
+
+        let oldRow = enemy.row;
+        let oldColumn = enemy.column;
+
+        if (newRow < 0 || newRow >= this.matrix.length) {
+            return;
+        } else if (newColumn < 0 || newColumn >= this.matrix[0].length) {
+            return;
+        }
+
+        let itemOnStep = this.matrix[newRow][newColumn];
+
+        if (itemOnStep.isEnemy() || itemOnStep.isFood() || itemOnStep.isCoin() || itemOnStep.isWall()) {
+            return;
+
+        } else if (itemOnStep.isBot()) {
+            itemOnStep.getHit();
+
+        } else {
+            enemy.move(newRow, newColumn);
+            itemOnStep.move(oldRow, oldColumn);
+            this.switchItems(newRow, newColumn, oldRow, oldColumn);
+        }
+
+        this.onchange(enemy, itemOnStep);
+    };
+
+    botStep(bot) {
+        if (bot.isDead) { return; }
+
+        let action = bot.getAction(this.numberMatrix);
+        if (action === ACTIONS.NOTHING) { return; }
+
+        let step = bot.getStep(action);
+
+        let newRow = bot.row + step.row;
+        let newColumn = bot.column + step.column;
+
+        let oldRow = bot.row;
+        let oldColumn = bot.column;
+
+        if (newRow < 0 || newRow >= this.matrix.length) {
+            return;
+        } else if (newColumn < 0 || newColumn >= this.matrix[0].length) {
+            return;
+        }
+
+        let itemOnStep = this.matrix[newRow][newColumn];
+        if (itemOnStep.isWall()) {
+            return;
+
+        } else if (itemOnStep.isEnemy() || itemOnStep.isBot()) {
+            itemOnStep.getHit();
+            bot.getCoins(itemOnStep);
+
+        } else if (itemOnStep.isFood()) {
+            itemOnStep.clear();
+            bot.getFood();
+
+        } else if (itemOnStep.isCoin()) {
+            itemOnStep.clear();
+            bot.getCoins(itemOnStep);
+
+        } else {
+            bot.move(newRow, newColumn);
+            itemOnStep.move(oldRow, oldColumn);
+            this.switchItems(newRow, newColumn, oldRow, oldColumn);
+        }
+
+        this.onchange(bot, itemOnStep);
+    };
+
+    switchItems(newRow, newColumn, oldRow, oldColumn) {
+        let tempItem = this.matrix[oldRow][oldColumn];
+        this.matrix[oldRow][oldColumn] = this.matrix[newRow][newColumn];
+        this.matrix[newRow][newColumn] = tempItem;
+
+        let tempNumber = this.numberMatrix[oldRow][oldColumn];
+        this.numberMatrix[oldRow][oldColumn] = this.numberMatrix[newRow][newColumn];
+        this.numberMatrix[newRow][newColumn] = tempNumber;
+    };
 }
-
-Field.prototype.generateItem = function (row, column, type) {
-
-    var item = new ItemBlock(row, column, type);
-    item.color = item.isBot() ? Field.itemColors[this.bots.length] : '';
-    this.matrix[row][column] = item;
-    this.numberMatrix[row][column] = type;
-
-    if (item.isBot()) {
-        this.bots.push(item);
-    }
-
-    else if (item.isEnemy()) {
-        this.enemies.push(item);
-    }
-    
-    this.onchange.call(this, this.matrix[row][column]);
-};
-
-Field.prototype.setType = function (row, column, type) {
-    this.matrix[row][column].type = type;
-    this.numberMatrix[row][column] = type;
-    this.onchange.call(this, this.matrix[row][column]);
-};
-
-Field.prototype.step = function () {
-    this.enemies.forEach(this.enemyStep.bind(this));
-    this.bots.forEach(this.botStep.bind(this));
-    
-    this.onStepEnd.call(this);
-};
-
-Field.prototype.enemyStep = function(enemy) {
-    if (enemy.isDead) return;
-   
-    var action = enemy.getAction(this.numberMatrix);
-        
-    if (action === ItemBlock.actions.NOTHING) return;
-
-    var step = enemy.getStep(action);
-
-    var newRow = enemy.row + step.row;
-    var newColumn = enemy.column + step.column;
-    
-    var oldRow = enemy.row;
-    var oldColumn = enemy.column;
-
-    if (newRow < 0 || newRow >= this.matrix.length) {
-        return;
-    } else if (newColumn < 0 || newColumn >= this.matrix[0].length) {
-        return;
-    }
-
-    var itemOnStep = this.matrix[newRow][newColumn];
-
-    if (itemOnStep.isEnemy() || itemOnStep.isFood() || itemOnStep.isCoin() || itemOnStep.isWall()) {
-        return;
-        
-    } else if (itemOnStep.isBot()) {
-        itemOnStep.getHit();
-        
-    } else {
-        enemy.move(newRow, newColumn);
-        itemOnStep.move(oldRow, oldColumn);
-        this.switchItems(newRow, newColumn, oldRow, oldColumn);
-    }
-    
-    this.onchange.call(this, enemy, itemOnStep);
-};
-
-Field.prototype.botStep = function(bot) {
-    if (bot.isDead) return;
-    
-    var action = bot.getAction(this.numberMatrix);
-    if (action === ItemBlock.actions.NOTHING) return;
-
-    var step = bot.getStep(action);
-
-    var newRow = bot.row + step.row;
-    var newColumn = bot.column + step.column;
-    
-    var oldRow = bot.row;
-    var oldColumn = bot.column;
-    
-    if (newRow < 0 || newRow >= this.matrix.length) {
-        return;
-    } else if (newColumn < 0 || newColumn >= this.matrix[0].length) {
-        return;
-    }
-
-    var itemOnStep = this.matrix[newRow][newColumn];
-    if (itemOnStep.isWall()) {
-        return;
-        
-    } else if (itemOnStep.isEnemy() || itemOnStep.isBot()) {
-        itemOnStep.getHit();
-        bot.getCoins(itemOnStep);
-        
-    } else if (itemOnStep.isFood()) {
-        itemOnStep.clear();
-        bot.getFood();
-
-    } else if (itemOnStep.isCoin()) {
-        itemOnStep.clear();
-        bot.getCoins(itemOnStep);
-        
-    } else {
-        bot.move(newRow, newColumn);
-        itemOnStep.move(oldRow, oldColumn);
-        this.switchItems(newRow, newColumn, oldRow, oldColumn);
-    }
-    
-    this.onchange.call(this, bot, itemOnStep);
-};
-
-Field.prototype.switchItems = function (newRow, newColumn, oldRow, oldColumn) {
-    var tempItem = this.matrix[oldRow][oldColumn];
-    this.matrix[oldRow][oldColumn] = this.matrix[newRow][newColumn];
-    this.matrix[newRow][newColumn] = tempItem;
-    
-    var tempNumber = this.numberMatrix[oldRow][oldColumn];
-    this.numberMatrix[oldRow][oldColumn] = this.numberMatrix[newRow][newColumn];
-    this.numberMatrix[newRow][newColumn] = tempNumber;
-};

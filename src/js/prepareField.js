@@ -1,116 +1,83 @@
-'use strict';
 
+import { ITEM_TYPES, TYPES } from './constants';
+import Field from './Field';
 /*
     To do:
-    1. Рандомно розкидувати елементи по карті
-    2. Моніторити кількість речей на полі і добавляти нові
-    3. Онуляти поле
-    4. Розібратися в лібі SYNAPTIC (для нейронних мереж)
-    5. Розібратися в коді генетичного алгоритму
+    1. Моніторити кількість речей на полі і добавляти нові
+    2. Онуляти поле
+    3. Розібратися в лібі SYNAPTIC (для нейронних мереж)
+    4. Розібратися в коді генетичного алгоритму
  */
 
-module.exports = function() {
-var blockSize = 30;
-var spaceSize = 1;
+const blockSize = 60;
+const spaceSize = 1;
 
-var field = new Field({
-    rows: 16,
-    columns: 16,
-    enemies: 8,
-    bots: 8,
-    coiuns: 8,
-    oninit: function() {
-    var fieldBlockEl = document.getElementById('fieldBlock');
+const rowsField = 8;
+const columnsField = 8;
+const enemiesAmount = 3;
+const coinsAmount = 2;
+const botsAmount = 3;
+const healthAmount = 2;
 
-    for (var i = 0; i < this.matrix.length; i++) {
-        var matrixRow = this.matrix[i];
-        for (var j = 0; j < matrixRow.length; j++) {
-            fieldBlockEl.appendChild(createItemBlock(matrixRow[j]));
+
+export default function prepareField () {
+
+    let fieldBlockId = 'fieldBlock';
+    let stepDelay = 100; // ms
+
+    let field = new Field({
+        rows: rowsField,
+        columns: columnsField,
+        enemies: enemiesAmount,
+        bots: botsAmount,
+        coins: coinsAmount,
+        health: healthAmount,
+        oninit: that => {
+
+            let fieldBlockEl = document.getElementById(fieldBlockId);
+
+            that.matrix.forEach(matrixRow => {
+                matrixRow.forEach(matrixItem => {
+                    fieldBlockEl.appendChild(createItemBlock(matrixItem))
+                });
+            });
         }
-    }
-}});
-
-field.onchange = function(itemFrom, itemTo) {
-    updateFieldItem(itemFrom);
-    
-    if (itemTo) {
-        updateFieldItem(itemTo);
-    }
-};
-
-field.onStepEnd = function() {
-    this.bots.forEach(function(item) {
-        updateBotInfo(item);
     });
-}
 
-function updateBotInfo(item) {
-    var id = item.id;
-    
-    var infoItem = document.querySelector('#info_' + id);
-    
-    if (!infoItem) {
-        infoItem = createInfoElement(id, item.color);
-        document.querySelector('#monitoring').appendChild(infoItem);
-    }
-    
-    var helth = item.isDead ? 0 : item.getHelth();
-    infoItem.querySelector('.helth-string').innerText = 'Helth: ' + helth;
-    infoItem.querySelector('.coins-string').innerText = 'Score: ' + item.coins;
-}
+    field.onchange = (itemFrom, itemTo) => {
+        updateFieldItem(itemFrom);
 
-function createInfoElement(id, color) {
-    var el = document.createElement('div');
-    el.id = 'info_' + id;
-    el.className = 'info-block';
-    
-    var icon = document.createElement('span');
-    icon.className = 'bot-icon';
-    icon.style.color = color;
-    
-    var helthStr =  document.createElement('div');
-    helthStr.className = 'helth-string';
-    
-    var coinsStr =  document.createElement('div');
-    coinsStr.className = 'coins-string';
-    
-    el.appendChild(icon);
-    el.appendChild(helthStr);
-    el.appendChild(coinsStr);
-    
-    return el;
-}
+        if (itemTo) {
+            updateFieldItem(itemTo);
+        }
+    };
 
-function updateFieldItem(item) {
-    var row = item.row;
-    var column = item.column;
+    field.onStepEnd = that => {
+        that.bots.forEach(item => updateBotInfo(item));
+    };
 
-    var element = document.querySelector('#item_' + row + '_' + column);
-    element.className = 'item-block item-block_' + itemTypes[item.type].className;
-    
-    element.style.color = item.color;
-}
+    let interval = null;
 
-var interval = null;
+    document.getElementById("start").addEventListener("click", () => {
+        interval = setInterval(() => {
+            field.step();
+        }, stepDelay);
+    });
 
-document.getElementById("start").addEventListener("click", function() {
-    interval = setInterval(function() {
+    document.getElementById("stop").addEventListener("click", () => {
+        clearInterval(interval);
+    });
+
+    document.getElementById("step").addEventListener("click", () => {
         field.step();
-    }, 500);
-});
+    });
 
-document.getElementById("stop").addEventListener("click", function() {
-    clearInterval(interval);
-});
+    // console.log(ITEM_TYPES)
+    // //
+    // field.generateItem(4, 2, TYPES.BOT_BIG);
+    // field.generateItem(4, 4, TYPES.BOT_BIG);
+    // field.generateItem(4, 6, TYPES.BOT_BIG);
 
-document.getElementById("step").addEventListener("click", function() {
-    field.step();
-});
-
-
-field.generateItem(4, 3, 6);
-field.generateItem(4, 2, 6);
-field.generateItem(4, 4, 6);
 
 //field.generateItem(6, 4, 7);
 //field.generateItem(6, 5, 7);
@@ -125,13 +92,57 @@ field.generateItem(4, 4, 6);
 //field.generateItem(10, 7, 1);
 //field.generateItem(10, 8, 1);
 
-function createItemBlock(fieldItem) {
-    var row = fieldItem.row;
-    var column = fieldItem.column;
+}
 
-    var item = document.createElement('div');
+function updateBotInfo(item) {
+    let { id, color, isDead, coins } = item;
 
-    item.className = 'item-block item-block_' + itemTypes[fieldItem.type].className;
+    let infoItem = document.querySelector('#info_' + id);
+
+    if (!infoItem) {
+        infoItem = createInfoElement(id, color);
+        document.querySelector('#monitoring').appendChild(infoItem);
+    }
+
+    let health = isDead ? 0 : item.getHealth();
+    infoItem.querySelector('.health-string').innerText = 'Health: ' + health;
+    infoItem.querySelector('.coins-string').innerText = 'Score: ' + coins;
+}
+
+function createInfoElement(id, color) {
+    let el = document.createElement('div');
+    el.id = 'info_' + id;
+    el.className = 'info-block';
+
+    let icon = document.createElement('span');
+    icon.className = 'bot-icon';
+    icon.style.color = color;
+
+    let healthStr = document.createElement('div');
+    healthStr.className = 'health-string';
+
+    let coinsStr = document.createElement('div');
+    coinsStr.className = 'coins-string';
+
+    el.appendChild(icon);
+    el.appendChild(healthStr);
+    el.appendChild(coinsStr);
+
+    return el;
+}
+
+function updateFieldItem({ row, column, type, color }) {
+
+    let element = document.querySelector('#item_' + row + '_' + column);
+    element.className = 'item-block item-block_' + ITEM_TYPES[type].className;
+    element.style.color = color;
+}
+
+function createItemBlock({ row, column, type }) {
+
+    let item = document.createElement('div');
+
+    item.className = 'item-block item-block_' + ITEM_TYPES[type].className;
     item.setAttribute('data-row', row);
     item.setAttribute('data-column', column);
     item.id = 'item_' + row + '_' + column;
@@ -140,6 +151,4 @@ function createItemBlock(fieldItem) {
     item.style.left = (column * (blockSize + spaceSize) + spaceSize) + 'px';
 
     return item;
-}
-
 }

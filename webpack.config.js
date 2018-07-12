@@ -4,11 +4,8 @@ const ExtractTextPlugin = require("extract-text-webpack-plugin");
 const CleanWebpackPlugin = require("clean-webpack-plugin");
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 
-const dist = path.join(__dirname, 'dist');
+const dist = path.join(__dirname, 'dist/');
 const app = path.join(__dirname, 'src/');
-
-const extractCSS = new ExtractTextPlugin(app + '/styles/[name].css');
-const extractLESS = new ExtractTextPlugin(app + './styles/[name].less');
 
 const env = process.argv[process.argv.length - 1];
 const isProduction = env === 'production';
@@ -17,19 +14,39 @@ module.exports = {
   context: __dirname,
   entry: {
     index: app + '/js/index',
-    style: app + "/styles/style.less"
   },
   output: {
     path: dist ,
-    filename: 'app.js'
+    filename: '[name].js'
   },
 
   
  module: {
- 	rules: [
-        {
+ 	rules: [{
+        test: /\.js$/,
+        exclude: /node_modules/,
+        use: [{
+            loader: 'babel-loader',
+            options: {
+                presets: ['@babel/preset-env']
+            }
+        },  'eslint-loader']
+
+    }, {
+        test: /\.less$/,
+        exclude: /node_modules/,
+        use: ExtractTextPlugin.extract({
+            use: [{
+                loader: "css-loader",
+                options: {
+                    minimize: isProduction
+                }
+            }, "postcss-loader", "less-loader"]
+        })
+    }, {
             test: /\.css$/,
-            use: extractCSS.extract({
+            exclude: /node_modules/,
+            use: ExtractTextPlugin.extract({
                 use: [{
                     loader: "css-loader",
                     options: {
@@ -37,30 +54,7 @@ module.exports = {
                     }
                 }, 'postcss-loader']
             })
-        },
-        {
-            test: /\.js$/,
-            exclude: /node_modules/,
-            use: [{
-                loader: 'babel-loader',
-                options: {
-                    presets: ['@babel/preset-env', 'es2015', 'es2016', 'es2017']
-                }
-            },  'eslint-loader']
-
-        },
-        {
-            test: /\.less$/,
-            use: extractLESS.extract({
-                use: [{
-                    loader: "css-loader",
-                    options: {
-                        minimize: isProduction
-                    }
-                }, "postcss-loader", "less-loader"]
-            })
-        }
-        , {
+    }, {
             test: /\.(png|jpg|svg|ttf|eot|woff|woff2)$/,
             use: [{
                 loader: 'url-loader',
@@ -79,8 +73,18 @@ module.exports = {
 
   plugins: [
       new CleanWebpackPlugin(dist),
-      extractLESS, 
-      extractCSS
+
+      new CopyWebpackPlugin([{
+          from: '*/*.html',
+          to: dist,
+          flatten: true
+      },{
+          from: app + 'styles/reset.min.css',
+          to: dist,
+          flatten: true
+      }]),
+      new ExtractTextPlugin('[name].css')
+
   ],
   watch: !isProduction,
   watchOptions: {
